@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> - Casino Wallet</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .page-header {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        /* ⭐ ปรับ Game Card ให้สวยและเท่ากันทุกใบ */
+        .game-card {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+            margin-bottom: 25px;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        .game-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+        }
+        
+        /* ⭐⭐⭐ แก้ไขขนาดรูปให้สวยและพอดี - แสดงแบบเต็มขนาด ⭐⭐⭐ */
+        .game-image-container {
+            width: 100%;
+            height: 240px;
+            overflow: hidden;
+            position: relative;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+        }
+        .game-image {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            object-position: center;
+            transition: transform 0.3s;
+        }
+        .game-card:hover .game-image {
+            transform: scale(1.05);
+        }
+        
+        /* Provider Badge */
+        .provider-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.95);
+            color: #667eea;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        
+        /* ⭐ ปรับ Game Info ให้พอดี */
+        .game-info {
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+        .game-name {
+            font-size: 1rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+            min-height: 40px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .play-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: all 0.3s;
+            margin-top: auto;
+        }
+        .play-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .search-box {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .filter-btn {
+            margin-right: 10px;
+            margin-bottom: 10px;
+            border-radius: 20px;
+        }
+        .error-message {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        /* Responsive Grid */
+        @media (max-width: 768px) {
+            .game-image-container {
+                height: 150px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <%- include('partials/navbar', { active: 'games' }) %>
+
+    <div class="container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h2 class="mb-2">
+                        <i class="fas fa-gamepad text-primary me-2"></i>
+                        เกมทั้งหมด
+                    </h2>
+                    <p class="text-muted mb-0">เลือกเกมที่คุณชื่นชอบและเริ่มเล่นได้เลย</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="d-flex align-items-center justify-content-end">
+                        <i class="fas fa-wallet text-primary me-2 fs-5"></i>
+                        <div>
+                            <small class="text-muted d-block">ยอดเงินคงเหลือ</small>
+                            <strong class="text-primary">
+                                <%= user.balance.toLocaleString('th-TH', {minimumFractionDigits: 2}) %> <%= user.currency %>
+                            </strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search and Filter -->
+        <div class="search-box">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text bg-transparent border-0">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input 
+                            type="text" 
+                            class="form-control border-0" 
+                            placeholder="ค้นหาเกม..." 
+                            id="searchInput"
+                        >
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="text-end">
+                        <button class="btn btn-outline-primary filter-btn active" data-filter="all">
+                            <i class="fas fa-th me-1"></i> ทั้งหมด
+                        </button>
+                        <button class="btn btn-outline-primary filter-btn" data-filter="slot">
+                            <i class="fas fa-dice me-1"></i> สล็อต
+                        </button>
+                        <button class="btn btn-outline-primary filter-btn" data-filter="live">
+                            <i class="fas fa-video me-1"></i> ไลฟ์
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <% if (error) { %>
+            <!-- Error Message -->
+            <div class="error-message">
+                <i class="fas fa-exclamation-triangle text-warning fa-3x mb-3"></i>
+                <h4>ไม่สามารถโหลดเกมได้</h4>
+                <p class="text-muted"><%= error %></p>
+                <button class="btn btn-primary" onclick="location.reload()">
+                    <i class="fas fa-sync-alt me-2"></i> ลองอีกครั้ง
+                </button>
+            </div>
+        <% } else if (games && games.length > 0) { %>
+            <!-- Games Grid -->
+            <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-3" id="gamesContainer">
+                <% games.forEach(game => { %>
+                    <div class="col game-item" 
+                         data-name="<%= game.game_name.toLowerCase() %>"
+                         data-type="<%= game.game_type || 'slot' %>">
+                        <div class="game-card">
+                            <div class="game-image-container">
+                                <img 
+                                    src="<%= game.image_url || 'https://via.placeholder.com/300x180?text=' + encodeURIComponent(game.game_name) %>" 
+                                    alt="<%= game.game_name %>"
+                                    class="game-image"
+                                    onerror="this.src='https://via.placeholder.com/300x180/667eea/ffffff?text=<%= encodeURIComponent(game.game_name) %>'"
+                                >
+                                <div class="provider-badge">
+                                    <i class="fas fa-tag me-1"></i>
+                                    <%= game.provider || 'PG' %>
+                                </div>
+                            </div>
+                            <div class="game-info">
+                                <div class="game-name" title="<%= game.game_name %>">
+                                    <%= game.game_name %>
+                                </div>
+                                <a 
+                                    href="/games/play/<%= game.game_code %>" 
+                                    class="btn play-btn"
+                                >
+                                    <i class="fas fa-play me-2"></i> เล่นเลย
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                <% }); %>
+            </div>
+
+            <!-- No Results Message -->
+            <div class="text-center py-5 d-none" id="noResults">
+                <div class="error-message">
+                    <i class="fas fa-search fa-3x mb-3 text-muted"></i>
+                    <h4>ไม่พบเกมที่คุณค้นหา</h4>
+                    <p class="text-muted">ลองค้นหาด้วยคำอื่นหรือเลือกหมวดหมู่อื่น</p>
+                </div>
+            </div>
+        <% } else { %>
+            <!-- No Games -->
+            <div class="error-message">
+                <i class="fas fa-gamepad fa-3x mb-3 text-muted"></i>
+                <h4>ยังไม่มีเกมให้บริการ</h4>
+                <p class="text-muted">กรุณากลับมาใหม่ภายหลัง</p>
+            </div>
+        <% } %>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Search functionality
+        const searchInput = document.getElementById('searchInput');
+        const gamesContainer = document.getElementById('gamesContainer');
+        const noResults = document.getElementById('noResults');
+        const filterBtns = document.querySelectorAll('.filter-btn');
+        
+        let currentFilter = 'all';
+
+        if (searchInput) {
+            searchInput.addEventListener('input', filterGames);
+        }
+
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                filterBtns.forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentFilter = this.dataset.filter;
+                filterGames();
+            });
+        });
+
+        function filterGames() {
+            const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+            const gameItems = document.querySelectorAll('.game-item');
+            let visibleCount = 0;
+
+            gameItems.forEach(item => {
+                const gameName = item.dataset.name;
+                const gameType = item.dataset.type;
+                const matchesSearch = gameName.includes(searchTerm);
+                const matchesFilter = currentFilter === 'all' || gameType === currentFilter;
+
+                if (matchesSearch && matchesFilter) {
+                    item.style.display = 'block';
+                    visibleCount++;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+
+            if (noResults) {
+                if (visibleCount === 0) {
+                    noResults.classList.remove('d-none');
+                    if (gamesContainer) gamesContainer.style.display = 'none';
+                } else {
+                    noResults.classList.add('d-none');
+                    if (gamesContainer) gamesContainer.style.display = 'flex';
+                }
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> - Casino Wallet</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+
+        }
+        .page-header {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .balance-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+        .balance-amount {
+            font-size: 3rem;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        .action-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            transition: all 0.3s;
+        }
+        .action-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+        .action-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin: 0 auto 20px;
+        }
+        .action-icon.deposit {
+            background: #d1ecf1;
+            color: #17a2b8;
+        }
+        .action-icon.withdraw {
+            background: #f8d7da;
+            color: #dc3545;
+        }
+        .transactions-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        .transaction-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+        }
+        .transaction-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+        .transaction-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+        .transaction-icon.win {
+            background: #d4edda;
+            color: #28a745;
+        }
+        .transaction-icon.bet {
+            background: #fff3cd;
+            color: #ffc107;
+        }
+        .alert-custom {
+            border-radius: 10px;
+            border: none;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .no-transactions {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <%- include('partials/navbar', { active: 'wallet' }) %>
+
+    <div class="container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h2 class="mb-2">
+                <i class="fas fa-wallet text-primary me-2"></i>
+                กระเป๋าเงิน
+            </h2>
+            <p class="text-muted mb-0">จัดการเงินในกระเป๋าของคุณ</p>
+        </div>
+
+        <!-- Success/Error Messages -->
+        <% if (success) { %>
+            <div class="alert alert-success alert-custom alert-dismissible fade show">
+                <i class="fas fa-check-circle me-2"></i>
+                <%= success %>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <% } %>
+        
+        <% if (error) { %>
+            <div class="alert alert-danger alert-custom alert-dismissible fade show">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <%= error %>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <% } %>
+
+        <!-- Balance Card -->
+        <div class="balance-card">
+            <h5 class="mb-0 opacity-75">ยอดเงินคงเหลือ</h5>
+            <div class="balance-amount">
+                <%= user.balance.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %> 
+                <small style="font-size: 1.5rem;"><%= user.currency %></small>
+            </div>
+            <small class="opacity-75">บัญชี: <%= user.username %></small>
+        </div>
+
+        <div class="row">
+            <!-- Deposit Card -->
+            <div class="col-md-6">
+                <div class="action-card">
+                    <div class="action-icon deposit">
+                        <i class="fas fa-plus"></i>
+                    </div>
+                    <h4 class="text-center mb-4">ฝากเงิน</h4>
+                    
+                    <form method="POST" action="/wallet/deposit">
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <i class="fas fa-money-bill-wave me-1"></i> จำนวนเงิน
+                            </label>
+                            <div class="input-group input-group-lg">
+                                <input 
+                                    type="number" 
+                                    class="form-control" 
+                                    name="amount" 
+                                    placeholder="0.00" 
+                                    step="0.01" 
+                                    min="1"
+                                    required
+                                >
+                                <span class="input-group-text"><%= user.currency %></span>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-outline-info" onclick="setAmount(100)">100</button>
+                            <button type="button" class="btn btn-outline-info" onclick="setAmount(500)">500</button>
+                            <button type="button" class="btn btn-outline-info" onclick="setAmount(1000)">1,000</button>
+                        </div>
+                        
+                        <div class="d-grid mt-3">
+                            <button type="submit" class="btn btn-info btn-lg">
+                                <i class="fas fa-plus-circle me-2"></i> ฝากเงิน
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Withdraw Card -->
+            <div class="col-md-6">
+                <div class="action-card">
+                    <div class="action-icon withdraw">
+                        <i class="fas fa-minus"></i>
+                    </div>
+                    <h4 class="text-center mb-4">ถอนเงิน</h4>
+                    
+                    <form method="POST" action="/wallet/withdraw">
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <i class="fas fa-money-bill-wave me-1"></i> จำนวนเงิน
+                            </label>
+                            <div class="input-group input-group-lg">
+                                <input 
+                                    type="number" 
+                                    class="form-control" 
+                                    name="amount" 
+                                    placeholder="0.00" 
+                                    step="0.01" 
+                                    min="1"
+                                    max="<%= user.balance %>"
+                                    required
+                                >
+                                <span class="input-group-text"><%= user.currency %></span>
+                            </div>
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                สามารถถอนได้สูงสุด <%= user.balance.toLocaleString('th-TH', {minimumFractionDigits: 2}) %> <%= user.currency %>
+                            </small>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-outline-danger" onclick="setWithdrawAmount(100)">100</button>
+                            <button type="button" class="btn btn-outline-danger" onclick="setWithdrawAmount(500)">500</button>
+                            <button type="button" class="btn btn-outline-danger" onclick="setWithdrawAmount('all')">ทั้งหมด</button>
+                        </div>
+                        
+                        <div class="d-grid mt-3">
+                            <button type="submit" class="btn btn-danger btn-lg">
+                                <i class="fas fa-minus-circle me-2"></i> ถอนเงิน
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Transactions -->
+        <div class="transactions-card">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="mb-0">
+                    <i class="fas fa-history me-2"></i> ประวัติล่าสุด
+                </h5>
+                <a href="/transactions" class="btn btn-sm btn-outline-primary">
+                    ดูทั้งหมด <i class="fas fa-arrow-right ms-1"></i>
+                </a>
+            </div>
+
+            <% if (transactions && transactions.length > 0) { %>
+                <% transactions.slice(0, 10).forEach(txn => { 
+                    let type = '';
+                    let amount = 0;
+                    let description = '';
+                    
+                    if (txn.betAmount > 0 && txn.payoutAmount === 0) {
+                        type = 'bet';
+                        amount = txn.betAmount;
+                        description = 'เดิมพัน';
+                    } else if (txn.payoutAmount > 0) {
+                        type = 'win';
+                        amount = txn.payoutAmount - txn.betAmount;
+                        description = amount > 0 ? 'ชนะ' : 'คืนเงิน';
+                    }
+                    
+                    const date = new Date(txn.createdDate || txn.timestamp);
+                %>
+                <div class="transaction-item">
+                    <div class="d-flex align-items-center">
+                        <div class="transaction-icon <%= type %>">
+                            <i class="fas <%= type === 'win' ? 'fa-trophy' : 'fa-dice' %>"></i>
+                        </div>
+                        <div class="ms-3">
+                            <div class="fw-bold"><%= description %></div>
+                            <small class="text-muted">
+                                <%= date.toLocaleDateString('th-TH') %> 
+                                <%= date.toLocaleTimeString('th-TH', {hour: '2-digit', minute: '2-digit'}) %>
+                            </small>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <div class="fw-bold <%= type === 'win' ? 'text-success' : 'text-warning' %>">
+                            <%= type === 'win' ? '+' : '-' %>
+                            <%= Math.abs(amount).toLocaleString('th-TH', {minimumFractionDigits: 2}) %> 
+                            <%= user.currency %>
+                        </div>
+                        <small class="text-muted">
+                            <%= txn.gameName || txn.gameCode || '-' %>
+                        </small>
+                    </div>
+                </div>
+                <% }); %>
+            <% } else { %>
+                <div class="no-transactions">
+                    <i class="fas fa-inbox fa-3x mb-3"></i>
+                    <p>ยังไม่มีประวัติการทำรายการ</p>
+                </div>
+            <% } %>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function setAmount(amount) {
+            const input = document.querySelector('form[action="/wallet/deposit"] input[name="amount"]');
+            input.value = amount;
+        }
+
+        function setWithdrawAmount(amount) {
+            const input = document.querySelector('form[action="/wallet/withdraw"] input[name="amount"]');
+            if (amount === 'all') {
+                input.value = <%= user.balance %>;
+            } else {
+                input.value = Math.min(amount, <%= user.balance %>);
+            }
+        }
+    </script>
+</body>
+</html>

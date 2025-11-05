@@ -1,0 +1,52 @@
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="/dashboard">
+            <i class="bi bi-wallet2"></i> Seamless Wallet
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link <%= active === 'dashboard' ? 'active' : '' %>" href="/dashboard">
+                        <i class="bi bi-house"></i> Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <%= active === 'games' ? 'active' : '' %>" href="/games">
+                        <i class="bi bi-controller"></i> Games
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <%= active === 'wallet' ? 'active' : '' %>" href="/wallet">
+                        <i class="bi bi-wallet"></i> Wallet
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <%= active === 'transactions' ? 'active' : '' %>" href="/transactions">
+                        <i class="bi bi-clock-history"></i> Transactions
+                    </a>
+                </li>
+            </ul>
+            <ul class="navbar-nav">
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-person-circle"></i> <%= user.username %>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li>
+                            <a class="dropdown-item disabled">
+                                <small class="text-muted">Balance: <%= user.balance.toFixed(2) %> <%= user.currency %></small>
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="/dashboard/profile"><i class="bi bi-person"></i> Profile</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="/auth/logout"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>

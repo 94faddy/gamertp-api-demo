@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> - Casino Wallet</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .dashboard-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        .balance-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .balance-amount {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+        .transaction-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+        }
+        .transaction-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+        .transaction-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+        .transaction-icon.win {
+            background: #d4edda;
+            color: #28a745;
+        }
+        .transaction-icon.bet {
+            background: #fff3cd;
+            color: #ffc107;
+        }
+        .quick-action {
+            background: white;
+            border: 2px solid #667eea;
+            color: #667eea;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            text-decoration: none;
+            display: block;
+            transition: all 0.3s;
+            margin-bottom: 15px;
+        }
+        .quick-action:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        .quick-action i {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <%- include('partials/navbar', { active: 'dashboard' }) %>
+
+    <div class="container">
+        <!-- Balance Card -->
+        <div class="balance-card">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h5 class="mb-0">ยอดเงินคงเหลือ</h5>
+                    <div class="balance-amount">
+                        <%= user.balance.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %> 
+                        <small style="font-size: 1.5rem;"><%= user.currency %></small>
+                    </div>
+                    <small class="opacity-75">บัญชี: <%= user.username %></small>
+                </div>
+                <div class="col-md-4 text-end">
+                    <a href="/wallet" class="btn btn-light btn-lg">
+                        <i class="fas fa-wallet me-2"></i> จัดการกระเป๋า
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Quick Stats -->
+            <div class="col-md-8">
+                <h4 class="text-white mb-3">
+                    <i class="fas fa-chart-line me-2"></i> สถิติรวม
+                </h4>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="stat-card">
+                            <div class="stat-value"><%= transactions.filter(t => t.betAmount > 0).length %></div>
+                            <div class="stat-label">จำนวนเดิมพัน</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="stat-card">
+                            <div class="stat-value">
+                                <%= transactions.filter(t => t.payoutAmount > 0).length %>
+                            </div>
+                            <div class="stat-label">จำนวนชนะ</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="stat-card">
+                            <div class="stat-value">
+                                <%= transactions.length > 0 ? 
+                                    ((transactions.filter(t => t.payoutAmount > 0).length / transactions.filter(t => t.betAmount > 0).length * 100) || 0).toFixed(0) 
+                                    : 0 %>%
+                            </div>
+                            <div class="stat-label">อัตราชนะ</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Transactions -->
+                <div class="dashboard-card">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0">
+                            <i class="fas fa-history me-2"></i> ประวัติล่าสุด
+                        </h5>
+                        <a href="/transactions" class="btn btn-sm btn-outline-primary">
+                            ดูทั้งหมด <i class="fas fa-arrow-right ms-1"></i>
+                        </a>
+                    </div>
+
+                    <% if (transactions && transactions.length > 0) { %>
+                        <% transactions.slice(0, 5).forEach(txn => { 
+                            let type = '';
+                            let amount = 0;
+                            let description = '';
+                            
+                            if (txn.betAmount > 0 && txn.payoutAmount === 0) {
+                                type = 'bet';
+                                amount = txn.betAmount;
+                                description = 'เดิมพัน';
+                            } else if (txn.payoutAmount > 0) {
+                                type = 'win';
+                                amount = txn.payoutAmount - txn.betAmount;
+                                description = amount > 0 ? 'ชนะ' : 'คืนเงิน';
+                            }
+                            
+                            const date = new Date(txn.createdDate || txn.timestamp);
+                        %>
+                        <div class="transaction-item">
+                            <div class="d-flex align-items-center">
+                                <div class="transaction-icon <%= type %>">
+                                    <i class="fas <%= type === 'win' ? 'fa-trophy' : type === 'bet' ? 'fa-dice' : 'fa-circle' %>"></i>
+                                </div>
+                                <div class="ms-3">
+                                    <div class="fw-bold"><%= description %></div>
+                                    <small class="text-muted">
+                                        <%= date.toLocaleDateString('th-TH') %> 
+                                        <%= date.toLocaleTimeString('th-TH') %>
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <div class="fw-bold <%= type === 'win' ? 'text-success' : 'text-warning' %>">
+                                    <%= type === 'win' ? '+' : '-' %>
+                                    <%= Math.abs(amount).toLocaleString('th-TH', {minimumFractionDigits: 2}) %> 
+                                    <%= user.currency %>
+                                </div>
+                                <small class="text-muted">
+                                    <%= txn.gameName || txn.gameCode || '-' %>
+                                </small>
+                            </div>
+                        </div>
+                        <% }); %>
+                    <% } else { %>
+                        <div class="text-center py-5 text-muted">
+                            <i class="fas fa-inbox fa-3x mb-3"></i>
+                            <p>ยังไม่มีประวัติการทำรายการ</p>
+                            <a href="/games" class="btn btn-primary">
+                                <i class="fas fa-gamepad me-2"></i> เริ่มเล่นเกม
+                            </a>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="col-md-4">
+                <h4 class="text-white mb-3">
+                    <i class="fas fa-bolt me-2"></i> เมนูด่วน
+                </h4>
+                
+                <a href="/games" class="quick-action">
+                    <i class="fas fa-gamepad"></i>
+                    <div class="fw-bold">เล่นเกม</div>
+                    <small>เลือกเกมและเริ่มเล่น</small>
+                </a>
+
+                <a href="/wallet" class="quick-action">
+                    <i class="fas fa-wallet"></i>
+                    <div class="fw-bold">ฝาก-ถอน</div>
+                    <small>จัดการเงินในกระเป๋า</small>
+                </a>
+
+                <a href="/transactions" class="quick-action">
+                    <i class="fas fa-history"></i>
+                    <div class="fw-bold">ประวัติ</div>
+                    <small>ดูประวัติการทำรายการ</small>
+                </a>
+
+                <a href="/dashboard/profile" class="quick-action">
+                    <i class="fas fa-user-circle"></i>
+                    <div class="fw-bold">โปรไฟล์</div>
+                    <small>จัดการข้อมูลส่วนตัว</small>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

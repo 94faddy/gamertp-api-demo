@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #1a1a2e;
+        }
+        
+        /* ⭐ Header แบบใหม่ ไม่บัง iframe */
+        .game-header {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.95) 0%, rgba(118, 75, 162, 0.95) 100%);
+            color: white;
+            padding: 12px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+        }
+        
+        /* ⭐⭐⭐ ปรับ Game Container ให้มี padding และไม่กินขอบ ⭐⭐⭐ */
+        .game-container {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            padding: 15px;
+            background: #1a1a2e;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        /* ⭐⭐⭐ Game Frame ใหม่ - มี border radius และ shadow ⭐⭐⭐ */
+        .game-frame {
+            width: 100%;
+            height: 100%;
+            max-width: 1400px;
+            max-height: calc(100vh - 90px);
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            background: #000;
+        }
+        
+        /* Balance Info */
+        .balance-info {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 8px 20px;
+            border-radius: 25px;
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s;
+        }
+        .balance-info:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        .balance-amount {
+            font-size: 1.1rem;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .balance-updating {
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        .refresh-icon {
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        .refresh-icon:hover {
+            transform: scale(1.2);
+        }
+        .refresh-icon.spinning {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .last-update {
+            font-size: 0.7rem;
+            opacity: 0.8;
+            margin-left: 10px;
+        }
+        .back-btn {
+            transition: all 0.3s;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+        }
+        .back-btn:hover {
+            transform: translateX(-5px);
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        /* Loading Overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(26, 26, 46, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s;
+        }
+        .loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 5px solid rgba(255, 255, 255, 0.1);
+            border-top: 5px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .game-container {
+                padding: 10px;
+                top: 56px;
+            }
+            .game-frame {
+                border-radius: 10px;
+            }
+            .game-header {
+                padding: 10px 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <div class="text-white mt-3">กำลังโหลดเกม...</div>
+    </div>
+
+    <!-- Game Header -->
+    <div class="game-header">
+        <div class="d-flex align-items-center">
+            <a href="/games" class="btn btn-sm back-btn">
+                <i class="bi bi-arrow-left"></i> กลับ
+            </a>
+            <span class="ms-3 fw-bold">
+                <i class="bi bi-controller"></i> <%= game.game_name %>
+            </span>
+        </div>
+        
+        <!-- Balance Display -->
+        <div class="balance-info">
+            <i class="bi bi-wallet2 fs-5"></i>
+            <div class="d-flex flex-column">
+                <div class="balance-amount" id="balanceDisplay">
+                    <%= user.balance.toFixed(2) %> <%= user.currency %>
+                </div>
+                <div class="last-update" id="lastUpdate">
+                    <i class="bi bi-clock-history"></i> เมื่อสักครู่
+                </div>
+            </div>
+            <i class="bi bi-arrow-clockwise refresh-icon" id="refreshIcon" title="รีเฟรชยอดเงิน"></i>
+        </div>
+    </div>
+
+    <!-- Game Container with Padding -->
+    <div class="game-container">
+        <iframe 
+            id="gameFrame" 
+            class="game-frame" 
+            src="<%= gameUrl %>" 
+            allow="autoplay; fullscreen; clipboard-write"
+            allowfullscreen
+        ></iframe>
+    </div>
+
+    <script>
+        // ⭐⭐⭐ Realtime Balance Update Script ⭐⭐⭐
+        
+        let lastBalance = <%= user.balance %>;
+        let isUpdating = false;
+        const currency = '<%= user.currency %>';
+
+        // Hide loading when iframe loads
+        document.getElementById('gameFrame').addEventListener('load', function() {
+            setTimeout(() => {
+                document.getElementById('loadingOverlay').classList.add('hidden');
+            }, 500);
+            console.log('🎮 Game loaded successfully');
+        });
+
+        // ฟังก์ชันสำหรับดึง balance จาก API
+        async function updateBalance() {
+            if (isUpdating) return;
+            
+            isUpdating = true;
+            const balanceDisplay = document.getElementById('balanceDisplay');
+            const lastUpdateDisplay = document.getElementById('lastUpdate');
+            const refreshIcon = document.getElementById('refreshIcon');
+            
+            try {
+                balanceDisplay.classList.add('balance-updating');
+                refreshIcon.classList.add('spinning');
+                
+                const response = await fetch('/api/user/balance', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const newBalance = parseFloat(data.balance);
+                    
+                    if (newBalance !== lastBalance) {
+                        if (newBalance > lastBalance) {
+                            balanceDisplay.style.color = '#28a745';
+                            console.log(`💰 Balance increased: ${lastBalance.toFixed(2)} → ${newBalance.toFixed(2)}`);
+                        } else {
+                            balanceDisplay.style.color = '#ffc107';
+                            console.log(`💸 Balance decreased: ${lastBalance.toFixed(2)} → ${newBalance.toFixed(2)}`);
+                        }
+                        
+                        balanceDisplay.textContent = `${newBalance.toFixed(2)} ${currency}`;
+                        lastBalance = newBalance;
+                        
+                        setTimeout(() => {
+                            balanceDisplay.style.color = 'white';
+                        }, 2000);
+                    } else {
+                        balanceDisplay.textContent = `${newBalance.toFixed(2)} ${currency}`;
+                    }
+                    
+                    const now = new Date();
+                    const timeString = now.toLocaleTimeString('th-TH', { 
+                        hour: '2-digit', 
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+                    lastUpdateDisplay.innerHTML = `<i class="bi bi-check-circle-fill"></i> ${timeString}`;
+                } else {
+                    console.error('Failed to fetch balance:', response.status);
+                    lastUpdateDisplay.innerHTML = `<i class="bi bi-x-circle-fill"></i> ผิดพลาด`;
+                }
+            } catch (error) {
+                console.error('Error updating balance:', error);
+                lastUpdateDisplay.innerHTML = `<i class="bi bi-exclamation-triangle-fill"></i> ออฟไลน์`;
+            } finally {
+                balanceDisplay.classList.remove('balance-updating');
+                refreshIcon.classList.remove('spinning');
+                isUpdating = false;
+            }
+        }
+
+        // Manual refresh
+        document.getElementById('refreshIcon').addEventListener('click', () => {
+            console.log('🔄 Manual refresh requested');
+            updateBalance();
+        });
+
+        // Auto-update every 2 seconds
+        const updateInterval = setInterval(updateBalance, 2000);
+
+        // First update after 1 second
+        setTimeout(updateBalance, 1000);
+
+        console.log('✅ Realtime balance update enabled');
+        console.log('🎮 Game:', '<%= game.game_name %>');
+        console.log('💰 Initial balance:', lastBalance.toFixed(2), currency);
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            clearInterval(updateInterval);
+            console.log('🛑 Balance update stopped');
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                if (confirm('คุณต้องการออกจากเกมหรือไม่?')) {
+                    clearInterval(updateInterval);
+                    window.location.href = '/games';
+                }
+            }
+            
+            if (e.key === 'F5') {
+                e.preventDefault();
+                console.log('🔄 F5 pressed - Refreshing balance');
+                updateBalance();
+            }
+        });
+
+        // Prevent right click on iframe (optional)
+        document.getElementById('gameFrame').addEventListener('contextmenu', e => e.preventDefault());
+    </script>
+</body>
+</html>
