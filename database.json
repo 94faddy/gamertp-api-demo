@@ -14,17 +14,17 @@
   "users": [
     {
       "id": "user-1763981338736",
-      "createdAt": "2025-11-24T10:48:58.736Z",
-      "balance": 1000,
-      "currency": "THB",
       "agentId": "agent-001",
       "username": "dev01",
       "password": "$2a$10$nEh1iMATQOs80YWLbYdOWesluF0F0YK0BcABrwS./qS54Ms5xEPFW",
-      "sessionToken": "f419278c7f5b2b5b3a3e1e8b371bf85044e50c5ae67a7f39ad14e1da813c2e84"
+      "balance": 99878.67,
+      "currency": "THB",
+      "sessionToken": "6b02de16-d9d7-4dd6-a91c-57ad67543da1",
+      "createdAt": "2025-11-24T10:48:58.736Z"
     }
   ],
   "settings": {
-    "defaultBalance": 100000,
+    "defaultBalance": 10000,
     "currency": "THB"
   }
 }

@@ -71,10 +71,6 @@
             border: 1px solid rgba(255, 255, 255, 0.2);
         }
         
-        .provider-icon-badge {
-            font-size: 1.2rem;
-        }
-        
         /* Balance Info */
         .balance-info {
             background: rgba(255, 255, 255, 0.2);
@@ -144,11 +140,6 @@
         .game-name {
             font-weight: bold;
             font-size: 1rem;
-        }
-        
-        .game-code {
-            font-size: 0.85rem;
-            opacity: 0.8;
         }
         
         /* Loading Overlay */
@@ -221,7 +212,6 @@
             
             <!-- Provider Badge -->
             <div class="provider-badge" style="background: rgba(255, 255, 255, 0.15);">
-                <span class="provider-icon-badge"><%= provider.icon %></span>
                 <span><%= provider.name %></span>
             </div>
         </div>
@@ -229,9 +219,6 @@
         <div class="game-info">
             <div>
                 <div class="game-name"><%= game.game_name %></div>
-                <div class="game-code">
-                    <i class="bi bi-code-square"></i> <%= game.game_code %>
-                </div>
             </div>
         </div>
         

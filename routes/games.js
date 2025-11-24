@@ -26,10 +26,6 @@ const PROVIDERS = {
     PP: { name: 'Pragmatic Play', code: 'PP', icon: '🎲', color: '#ffa500' }
 };
 
-const JILI_GAME_MAP = {
-    '4': 'tislot',
-};
-
 // Game List Page
 router.get('/', isAuthenticated, async (req, res) => {
     try {
@@ -74,97 +70,7 @@ router.get('/', isAuthenticated, async (req, res) => {
     }
 });
 
-// GET GAME URL ENDPOINT
-router.post('/api/getGameUrl', isAuthenticated, async (req, res) => {
-    try {
-        const { username, gameCode, provider, gameId } = req.body;
-        const user = db.findUserById(req.session.user.id);
-
-        console.log('\n' + '='.repeat(60));
-        console.log('🎮 GET GAME URL REQUEST');
-        console.log('='.repeat(60));
-        console.log('📨 Request:', { username, gameCode, provider });
-
-        if (!username || !gameCode || !provider) {
-            return res.status(400).json({
-                success: false,
-                error: 'Missing required fields'
-            });
-        }
-
-        if (!user.sessionToken) {
-            user.sessionToken = crypto.randomUUID();
-            db.updateUser(user.id, { sessionToken: user.sessionToken });
-        }
-
-        console.log('\n📡 Trying Main API endpoint: /api/getGameUrl');
-        
-        try {
-            const mainApiResponse = await axiosInstance.post(
-                `${process.env.API_ENDPOINT}/api/getGameUrl`,
-                { username, gameCode, provider, gameId: gameId || gameCode },
-                {
-                    headers: { 
-                        'x-api-key': process.env.API_KEY,
-                        'Content-Type': 'application/json'
-                    },
-                    timeout: 15000
-                }
-            );
-
-            const gameUrl = mainApiResponse.data.gameUrl;
-            if (!gameUrl) throw new Error('Empty gameUrl');
-
-            console.log('✅ Got URL from Main API');
-            
-            if (mainApiResponse.data.sessionToken) {
-                user.sessionToken = mainApiResponse.data.sessionToken;
-                db.updateUser(user.id, { sessionToken: mainApiResponse.data.sessionToken });
-            }
-
-            return res.json({
-                success: true,
-                gameUrl: gameUrl,
-                sessionToken: user.sessionToken,
-                provider: provider
-            });
-
-        } catch (mainApiError) {
-            console.error('⚠️ Main API failed:', mainApiError.response?.status);
-            console.log('📌 Using Fallback URL generation...\n');
-            
-            try {
-                const fallbackUrl = generateFallbackGameUrl(
-                    provider,
-                    gameCode,
-                    user.sessionToken,
-                    { game_id: gameId || gameCode }
-                );
-
-                return res.json({
-                    success: true,
-                    gameUrl: fallbackUrl,
-                    sessionToken: user.sessionToken,
-                    provider: provider,
-                    fallback: true
-                });
-
-            } catch (fallbackError) {
-                console.error('❌ Fallback failed:', fallbackError.message);
-                return res.status(500).json({
-                    success: false,
-                    error: 'Failed to generate game URL'
-                });
-            }
-        }
-
-    } catch (error) {
-        console.error('❌ Error:', error.message);
-        return res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// Play Game
+// Play Game - ✅ CORRECT METHOD (from working version)
 router.get('/play/:provider/:gameCode', isAuthenticated, async (req, res) => {
     try {
         const { provider, gameCode } = req.params;
@@ -180,14 +86,14 @@ router.get('/play/:provider/:gameCode', isAuthenticated, async (req, res) => {
 
         const providerInfo = PROVIDERS[provider.toUpperCase()];
         
-        console.log('\n' + '='.repeat(60));
+        console.log('\n' + '='.repeat(80));
         console.log('🎮 GAME LAUNCH');
-        console.log('='.repeat(60));
+        console.log('='.repeat(80));
         console.log('Provider:', providerInfo.name);
         console.log('User:', user.username);
         console.log('Game Code:', gameCode);
 
-        // ดึง game list
+        // Get game list
         let game = null;
         try {
             const response = await axiosInstance.get(
@@ -213,59 +119,91 @@ router.get('/play/:provider/:gameCode', isAuthenticated, async (req, res) => {
             });
         }
 
-        // Session token
-        if (!user.sessionToken) {
-            user.sessionToken = crypto.randomUUID();
-            db.updateUser(user.id, { sessionToken: user.sessionToken });
-        }
-
-        console.log('Session:', user.sessionToken.substring(0, 20) + '...');
-        console.log('\n📡 Getting game URL...');
+        // ============================================
+        // ✅ STEP 1: Create session in Main API
+        // ============================================
+        console.log('\n📡 Creating session in Main API...');
         
+        let sessionToken = null;
         let gameUrl = '';
-        let usedFallback = false;
         
         try {
-            const gameUrl = generateFallbackGameUrl(
-                provider.toUpperCase(), 
-                gameCode, 
-                user.sessionToken,
-                game
+            // Call /api/setGameSetting (this creates the session)
+            const sessionResponse = await axiosInstance.post(
+                `${process.env.API_ENDPOINT}/api/setGameSetting`,
+                {
+                    username: user.username,
+                    gameCode: gameCode,
+                    isPlayerSetting: true,
+                    setting: [],
+                    buyFeatureSetting: []
+                },
+                {
+                    headers: { 
+                        'x-api-key': process.env.API_KEY,
+                        'Content-Type': 'application/json'
+                    },
+                    timeout: 10000
+                }
             );
 
-            gameUrl = apiResponse.data.gameUrl;
-            if (!gameUrl) throw new Error('Empty gameUrl');
+            // ⭐ Main API returns the session token
+            sessionToken = sessionResponse.data;
             
-            console.log('✅ Got URL from Main API');
-
-            if (apiResponse.data.sessionToken) {
-                user.sessionToken = apiResponse.data.sessionToken;
-                db.updateUser(user.id, { sessionToken: apiResponse.data.sessionToken });
+            if (!sessionToken || typeof sessionToken !== 'string') {
+                throw new Error('Invalid token response: ' + JSON.stringify(sessionResponse.data));
             }
-
-        } catch (apiError) {
-            console.error('⚠️ Main API error, using fallback');
             
-            try {
-                gameUrl = generateFallbackGameUrl(
-                    provider.toUpperCase(), 
-                    gameCode, 
-                    user.sessionToken,
-                    game
-                );
-                usedFallback = true;
-            } catch (fallbackError) {
-                console.error('❌ Fallback failed:', fallbackError.message);
-                return res.render('error', {
-                    title: 'Error',
-                    message: 'Failed to launch game',
-                    error: { message: fallbackError.message }
-                });
-            }
+            console.log('✅ Got session token from Main API');
+            console.log('   Token:', sessionToken.substring(0, 40) + '...');
+
+            // Save to database
+            user.sessionToken = sessionToken;
+            db.updateUser(user.id, { sessionToken: sessionToken });
+            console.log('💾 Token saved to database');
+
+        } catch (sessionError) {
+            console.error('❌ Failed to create session:');
+            console.error('   Status:', sessionError.response?.status);
+            console.error('   Message:', sessionError.response?.data?.message || sessionError.message);
+            
+            return res.render('error', {
+                title: 'Session Error',
+                message: 'Failed to create game session',
+                error: { 
+                    message: sessionError.response?.data?.message || 'Cannot initialize game session',
+                    status: sessionError.response?.status
+                }
+            });
         }
 
-        console.log('✅ Game ready');
-        console.log(`📌 Fallback used: ${usedFallback ? 'YES' : 'NO'}`);
+        // ============================================
+        // ✅ STEP 2: Build game URL with token
+        // ============================================
+        console.log('\n🔗 Building game URL...');
+        
+        try {
+            gameUrl = buildGameUrl(
+                provider.toUpperCase(),
+                gameCode,
+                sessionToken,
+                game
+            );
+            
+            console.log('✅ Game URL built successfully');
+            console.log('   URL:', gameUrl.substring(0, 80) + '...');
+            
+        } catch (urlError) {
+            console.error('❌ Failed to build URL:', urlError.message);
+            return res.render('error', {
+                title: 'URL Error',
+                message: 'Cannot generate game URL',
+                error: { message: urlError.message }
+            });
+        }
+
+        console.log('='.repeat(80));
+        console.log('✅ Game ready to launch\n');
 
         res.render('play', {
             title: `Play ${game.game_name}`,
@@ -276,7 +214,7 @@ router.get('/play/:provider/:gameCode', isAuthenticated, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('❌ Error:', error);
+        console.error('❌ Unexpected error:', error);
         res.status(500).render('error', {
             title: 'Error',
             message: 'Failed to launch game',
@@ -284,6 +222,58 @@ router.get('/play/:provider/:gameCode', isAuthenticated, async (req, res) => {
         });
     }
 });
+
+// ⭐ BUILD GAME URL - Works with all providers
+function buildGameUrl(provider, gameCode, sessionToken, gameData = {}) {
+    console.log('   Provider:', provider);
+    console.log('   Game Code:', gameCode);
+    
+    const operatorToken = 'T65-AWDF-WAUE-OQ09-GST1';
+    let gameUrl = '';
+
+    switch (provider) {
+        case 'PG':
+            gameUrl = `https://m.pgsoft-th.com/${gameCode}/index.html?` +
+                     `language=th&bet_type=1&` +
+                     `operator_token=${operatorToken}&` +
+                     `operator_player_session=${sessionToken}&` +
+                     `or=cdn.pgsoft-th.com`;
+            break;
+
+        case 'JILI':
+            const jiliGameId = gameData.game_id || gameCode;
+            gameUrl = `https://portal.cgm-game.com/play/game?` +
+                     `operator_player_session=${sessionToken}&` +
+                     `operator_token=${operatorToken}&` +
+                     `game_code=${gameCode}&` +
+                     `game_id=${jiliGameId}&` +
+                     `provider=jili`;
+            break;
+
+        case 'JOKER':
+            gameUrl = `https://portal.cgm-game.com/play/game?` +
+                     `operator_player_session=${sessionToken}&` +
+                     `operator_token=${operatorToken}&` +
+                     `game_code=${gameCode}&` +
+                     `game_id=${gameCode}&` +
+                     `provider=joker`;
+            break;
+
+        case 'PP':
+            gameUrl = `https://portal.cgm-game.com/play/game?` +
+                     `operator_player_session=${sessionToken}&` +
+                     `operator_token=${operatorToken}&` +
+                     `game_code=${gameCode}&` +
+                     `game_id=${gameCode}&` +
+                     `provider=pracmatic`;
+            break;
+
+        default:
+            throw new Error(`Unsupported provider: ${provider}`);
+    }
+
+    return gameUrl;
+}
 
 // Game List API
 router.post('/api/gameList', isAuthenticated, async (req, res) => {
@@ -308,76 +298,6 @@ router.post('/api/gameList', isAuthenticated, async (req, res) => {
         return res.status(500).json({ success: false, error: error.message });
     }
 });
-
-// ⭐⭐⭐ FALLBACK URL GENERATOR - สำคัญมาก!
-function generateFallbackGameUrl(provider, gameCode, sessionToken, gameData = {}) {
-    console.log('\n⚠️ FALLBACK URL GENERATION');
-    console.log('='.repeat(60));
-    console.log('Provider:', provider);
-    console.log('Game Code:', gameCode);
-    console.log('Session Token:', sessionToken.substring(0, 30) + '...');
-    
-    const operatorToken = 'T65-AWDF-WAUE-OQ09-GST1';
-    let gameUrl = '';
-
-    switch (provider) {
-        case 'PG':
-            gameUrl = `https://m.pgsoft-th.com/${gameCode}/index.html?` +
-                     `language=th&bet_type=1&operator_token=${operatorToken}&` +
-                     `operator_player_session=${sessionToken}&or=cdn.pgsoft-th.com`;
-            
-            console.log('\n🔗 PG URL Breakdown:');
-            console.log('   Host: m.pgsoft-th.com');
-            console.log('   Game Code:', gameCode);
-            console.log('   Operator Token:', operatorToken);
-            break;
-
-        case 'JILI':
-            const jiliGameId = JILI_GAME_MAP[gameCode] || gameData.game_id || gameCode;
-            gameUrl = `https://portal.cgm-game.com/play/game?` +
-                     `operator_player_session=${sessionToken}&` +
-                     `operator_token=${operatorToken}&` +
-                     `game_code=${gameCode}&game_id=${jiliGameId}&provider=jili`;
-            
-            console.log('\n🔗 JILI URL Breakdown:');
-            console.log('   Host: portal.cgm-game.com');
-            console.log('   Game Code:', gameCode);
-            console.log('   Game ID:', jiliGameId);
-            break;
-
-        case 'JOKER':
-            gameUrl = `https://portal.cgm-game.com/play/game?` +
-                     `operator_player_session=${sessionToken}&` +
-                     `operator_token=${operatorToken}&` +
-                     `game_code=${gameCode}&game_id=${gameCode}&provider=joker`;
-            
-            console.log('\n🔗 JOKER URL Breakdown:');
-            console.log('   Host: portal.cgm-game.com');
-            console.log('   Game Code:', gameCode);
-            break;
-
-        case 'PP':
-            gameUrl = `https://portal.cgm-game.com/play/game?` +
-                     `operator_player_session=${sessionToken}&` +
-                     `operator_token=${operatorToken}&` +
-                     `game_code=${gameCode}&game_id=${gameCode}&provider=pracmatic`;
-            
-            console.log('\n🔗 PP URL Breakdown:');
-            console.log('   Host: portal.cgm-game.com');
-            console.log('   Game Code:', gameCode);
-            break;
-
-        default:
-            throw new Error(`Unsupported provider: ${provider}`);
-    }
-
-    console.log('\n✅ Generated URL:');
-    console.log(gameUrl);
-    console.log('\n📊 URL Length:', gameUrl.length, 'chars');
-    console.log('='.repeat(60));
-    
-    return gameUrl;
-}
 
 // Providers API
 router.get('/api/providers', (req, res) => {
