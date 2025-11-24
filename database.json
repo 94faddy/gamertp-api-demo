@@ -19,12 +19,12 @@
       "password": "$2a$10$nEh1iMATQOs80YWLbYdOWesluF0F0YK0BcABrwS./qS54Ms5xEPFW",
       "balance": 99878.67,
       "currency": "THB",
-      "sessionToken": "6b02de16-d9d7-4dd6-a91c-57ad67543da1",
+      "sessionToken": "770f119e2f4270463d557d3a821d23ae470598da2e7361db78ffd008b5a2f9e4",
       "createdAt": "2025-11-24T10:48:58.736Z"
     }
   ],
   "settings": {
-    "defaultBalance": 10000,
+    "defaultBalance": 100000,
     "currency": "THB"
   }
 }
