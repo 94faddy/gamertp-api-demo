@@ -19,41 +19,22 @@ const isAuthenticated = (req, res, next) => {
     }
 };
 
-// ⭐⭐⭐ Provider Configuration (Client side - UI only) ⭐⭐⭐
-// ⚠️ NOTE: URLs are NOT here - they come from API!
 const PROVIDERS = {
-    PG: {
-        name: 'PG Soft',
-        code: 'PG',
-        icon: '🎮',
-        color: '#667eea'
-    },
-    JILI: {
-        name: 'JILI',
-        code: 'JILI',
-        icon: '🎰',
-        color: '#764ba2'
-    },
-    JOKER: {
-        name: 'Joker',
-        code: 'JOKER',
-        icon: '♠️',
-        color: '#ff6b6b'
-    },
-    PP: {
-        name: 'Pragmatic Play',
-        code: 'PP',
-        icon: '🎲',
-        color: '#ffa500'
-    }
+    PG: { name: 'PG Soft', code: 'PG', icon: '🎮', color: '#667eea' },
+    JILI: { name: 'JILI', code: 'JILI', icon: '🎰', color: '#764ba2' },
+    JOKER: { name: 'Joker', code: 'JOKER', icon: '♠️', color: '#ff6b6b' },
+    PP: { name: 'Pragmatic Play', code: 'PP', icon: '🎲', color: '#ffa500' }
 };
 
-// Game List Page - Load games by provider
+const JILI_GAME_MAP = {
+    '4': 'tislot',
+};
+
+// Game List Page
 router.get('/', isAuthenticated, async (req, res) => {
     try {
         const user = db.findUserById(req.session.user.id);
         const selectedProvider = req.query.provider || 'PG';
-        
         let games = [];
         let error = null;
 
@@ -61,9 +42,7 @@ router.get('/', isAuthenticated, async (req, res) => {
             console.log(`\n📊 Loading games from provider: ${selectedProvider}`);
             const response = await axiosInstance.get(
                 `${process.env.GAME_API_URL}/api/gamelist?provider=${selectedProvider}`,
-                {
-                    timeout: 10000
-                }
+                { timeout: 10000 }
             );
             games = response.data.games || [];
             console.log(`✅ Loaded ${games.length} games from ${selectedProvider}`);
@@ -95,38 +74,35 @@ router.get('/', isAuthenticated, async (req, res) => {
     }
 });
 
-// ============================================
-// 🆕 NEW ENDPOINT - POST /api/getGameUrl
-// ============================================
-// This endpoint is called by the Play page
-// It requests the game URL from Main API
-
+// GET GAME URL ENDPOINT
 router.post('/api/getGameUrl', isAuthenticated, async (req, res) => {
     try {
-        const { username, gameCode, provider, gameId, isPlayerSetting, setting, buyFeatureSetting } = req.body;
+        const { username, gameCode, provider, gameId } = req.body;
         const user = db.findUserById(req.session.user.id);
 
-        console.log('\n=== GET GAME URL FROM MAIN API ===');
-        console.log('📡 Backend forwarding request to Main API...');
-        console.log('Provider:', provider);
-        console.log('Game Code:', gameCode);
-        console.log('Username:', username);
+        console.log('\n' + '='.repeat(60));
+        console.log('🎮 GET GAME URL REQUEST');
+        console.log('='.repeat(60));
+        console.log('📨 Request:', { username, gameCode, provider });
 
-        // ============================================
-        // CALL MAIN API TO GET GAME URL
-        // ============================================
+        if (!username || !gameCode || !provider) {
+            return res.status(400).json({
+                success: false,
+                error: 'Missing required fields'
+            });
+        }
+
+        if (!user.sessionToken) {
+            user.sessionToken = crypto.randomUUID();
+            db.updateUser(user.id, { sessionToken: user.sessionToken });
+        }
+
+        console.log('\n📡 Trying Main API endpoint: /api/getGameUrl');
+        
         try {
             const mainApiResponse = await axiosInstance.post(
                 `${process.env.API_ENDPOINT}/api/getGameUrl`,
-                {
-                    username: username,
-                    gameCode: gameCode,
-                    provider: provider,
-                    gameId: gameId || gameCode,
-                    isPlayerSetting: isPlayerSetting || true,
-                    setting: setting || [],
-                    buyFeatureSetting: buyFeatureSetting || []
-                },
+                { username, gameCode, provider, gameId: gameId || gameCode },
                 {
                     headers: { 
                         'x-api-key': process.env.API_KEY,
@@ -137,81 +113,81 @@ router.post('/api/getGameUrl', isAuthenticated, async (req, res) => {
             );
 
             const gameUrl = mainApiResponse.data.gameUrl;
-            const newSessionToken = mainApiResponse.data.sessionToken;
+            if (!gameUrl) throw new Error('Empty gameUrl');
 
-            console.log('✅ Main API Response received');
-            console.log('🔗 Game URL length:', gameUrl.length, 'chars');
+            console.log('✅ Got URL from Main API');
             
-            // Update session token if provided by Main API
-            if (newSessionToken && typeof newSessionToken === 'string') {
-                user.sessionToken = newSessionToken;
-                db.updateUser(user.id, { sessionToken: newSessionToken });
-                console.log('📝 Session token updated from API');
+            if (mainApiResponse.data.sessionToken) {
+                user.sessionToken = mainApiResponse.data.sessionToken;
+                db.updateUser(user.id, { sessionToken: mainApiResponse.data.sessionToken });
             }
 
-            // ✅ Return to client
             return res.json({
                 success: true,
                 gameUrl: gameUrl,
-                sessionToken: newSessionToken || user.sessionToken,
-                provider: provider,
-                message: 'Game URL retrieved successfully'
+                sessionToken: user.sessionToken,
+                provider: provider
             });
 
         } catch (mainApiError) {
-            console.error('❌ Main API Error:', mainApiError.response?.status, mainApiError.message);
+            console.error('⚠️ Main API failed:', mainApiError.response?.status);
+            console.log('📌 Using Fallback URL generation...\n');
             
-            // Log API error response for debugging
-            if (mainApiError.response?.data) {
-                console.error('API Response:', mainApiError.response.data);
-            }
+            try {
+                const fallbackUrl = generateFallbackGameUrl(
+                    provider,
+                    gameCode,
+                    user.sessionToken,
+                    { game_id: gameId || gameCode }
+                );
 
-            // ⚠️ If Main API is down, we still have fallback in frontend
-            throw mainApiError;
+                return res.json({
+                    success: true,
+                    gameUrl: fallbackUrl,
+                    sessionToken: user.sessionToken,
+                    provider: provider,
+                    fallback: true
+                });
+
+            } catch (fallbackError) {
+                console.error('❌ Fallback failed:', fallbackError.message);
+                return res.status(500).json({
+                    success: false,
+                    error: 'Failed to generate game URL'
+                });
+            }
         }
 
     } catch (error) {
-        console.error('❌ Error in getGameUrl endpoint:', error.message);
-        
-        // Return error to frontend
-        // Frontend will use fallback URL generation
-        return res.status(error.response?.status || 500).json({
-            success: false,
-            message: 'Failed to get game URL from API',
-            error: error.message,
-            note: 'Frontend will use fallback URL generation'
-        });
+        console.error('❌ Error:', error.message);
+        return res.status(500).json({ success: false, error: error.message });
     }
 });
 
-// Play Game - Get URL from API
+// Play Game
 router.get('/play/:provider/:gameCode', isAuthenticated, async (req, res) => {
     try {
         const { provider, gameCode } = req.params;
         const user = db.findUserById(req.session.user.id);
 
-        // ✅ Validate Provider (UI validation only)
         if (!PROVIDERS[provider.toUpperCase()]) {
             return res.status(400).render('error', {
                 title: 'Error',
                 message: 'Invalid provider',
-                error: {
-                    message: `Provider ${provider} is not supported.`,
-                    details: 'Available providers: ' + Object.keys(PROVIDERS).join(', ')
-                }
+                error: { message: `Provider ${provider} not supported` }
             });
         }
 
         const providerInfo = PROVIDERS[provider.toUpperCase()];
         
-        console.log('\n=== Game Launch Process ===');
+        console.log('\n' + '='.repeat(60));
+        console.log('🎮 GAME LAUNCH');
+        console.log('='.repeat(60));
         console.log('Provider:', providerInfo.name);
         console.log('User:', user.username);
         console.log('Game Code:', gameCode);
 
-        // ============================================
-        // STEP 1: ดึง Game List จาก API เพื่อหาเกม
-        // ============================================
+        // ดึง game list
         let game = null;
         try {
             const response = await axiosInstance.get(
@@ -219,19 +195,17 @@ router.get('/play/:provider/:gameCode', isAuthenticated, async (req, res) => {
                 { timeout: 10000 }
             );
             const games = response.data.games || [];
-            game = games.find(g => 
-                g.game_code === gameCode || 
-                g.game_id === gameCode ||
-                g.code === gameCode
-            );
+            game = games.find(g => g.game_code === gameCode || g.game_id === gameCode || g.code === gameCode);
 
             if (!game) {
                 console.log(`❌ Game not found: ${gameCode}`);
                 return res.redirect(`/games?provider=${provider.toUpperCase()}`);
             }
+            
             console.log(`✅ Game found: ${game.game_name}`);
+
         } catch (error) {
-            console.error('❌ Error fetching game list:', error.message);
+            console.error('❌ Error loading game list:', error.message);
             return res.status(500).render('error', {
                 title: 'Error',
                 message: 'Failed to load game',
@@ -239,65 +213,38 @@ router.get('/play/:provider/:gameCode', isAuthenticated, async (req, res) => {
             });
         }
 
-        // ============================================
-        // STEP 2: สร้าง/อัพเดท sessionToken
-        // ============================================
+        // Session token
         if (!user.sessionToken) {
             user.sessionToken = crypto.randomUUID();
             db.updateUser(user.id, { sessionToken: user.sessionToken });
-            console.log('✅ New session token created');
         }
 
-        console.log('Session Token:', user.sessionToken.substring(0, 20) + '...');
-
-        // ============================================
-        // STEP 3: ⭐⭐⭐ GET GAME URL FROM API ⭐⭐⭐
-        // ============================================
-        console.log('\n📡 Requesting game URL from API...');
+        console.log('Session:', user.sessionToken.substring(0, 20) + '...');
+        console.log('\n📡 Getting game URL...');
         
         let gameUrl = '';
+        let usedFallback = false;
         
         try {
-            // ⭐ Ask API for game URL
-            // API knows all provider details, client doesn't
-            const apiResponse = await axiosInstance.post(
-                `${process.env.API_ENDPOINT}/api/getGameUrl`,
-                {
-                    username: user.username,
-                    gameCode: gameCode,
-                    provider: provider.toUpperCase(),
-                    gameId: game.game_id || gameCode,
-                    isPlayerSetting: true,
-                    setting: [],
-                    buyFeatureSetting: []
-                },
-                {
-                    headers: { 
-                        'x-api-key': process.env.API_KEY,
-                        'Content-Type': 'application/json'
-                    },
-                    timeout: 10000
-                }
+            const gameUrl = generateFallbackGameUrl(
+                provider.toUpperCase(), 
+                gameCode, 
+                user.sessionToken,
+                game
             );
 
-            // ✅ API returns URL - client just uses it!
             gameUrl = apiResponse.data.gameUrl;
-            console.log('✅ Game URL received from API');
-            console.log('🔗 URL length:', gameUrl.length, 'chars');
+            if (!gameUrl) throw new Error('Empty gameUrl');
             
-            // If API returns new sessionToken, use it
-            if (apiResponse.data.sessionToken && typeof apiResponse.data.sessionToken === 'string') {
-                console.log('📄 Using new session token from API');
+            console.log('✅ Got URL from Main API');
+
+            if (apiResponse.data.sessionToken) {
                 user.sessionToken = apiResponse.data.sessionToken;
                 db.updateUser(user.id, { sessionToken: apiResponse.data.sessionToken });
             }
 
         } catch (apiError) {
-            console.error('❌ Error getting game URL from API:', apiError.message);
-            
-            // ⚠️ Fallback: Try to generate URL on client side if API fails
-            // This is TEMPORARY - only if API is down
-            console.log('⚠️  Fallback: Generating URL on client side...');
+            console.error('⚠️ Main API error, using fallback');
             
             try {
                 gameUrl = generateFallbackGameUrl(
@@ -306,22 +253,19 @@ router.get('/play/:provider/:gameCode', isAuthenticated, async (req, res) => {
                     user.sessionToken,
                     game
                 );
-                console.log('✅ Fallback URL generated');
+                usedFallback = true;
             } catch (fallbackError) {
-                console.error('❌ Fallback also failed:', fallbackError.message);
+                console.error('❌ Fallback failed:', fallbackError.message);
                 return res.render('error', {
                     title: 'Error',
                     message: 'Failed to launch game',
-                    error: {
-                        message: 'Cannot connect to game server',
-                        details: apiError.message
-                    }
+                    error: { message: fallbackError.message }
                 });
             }
         }
 
-        console.log('✅ Game URL ready');
-        console.log(`🔗 Provider: ${providerInfo.name}`);
+        console.log('✅ Game ready');
+        console.log(`📌 Fallback used: ${usedFallback ? 'YES' : 'NO'}`);
 
         res.render('play', {
             title: `Play ${game.game_name}`,
@@ -332,64 +276,46 @@ router.get('/play/:provider/:gameCode', isAuthenticated, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('❌ Server Error:', error);
+        console.error('❌ Error:', error);
         res.status(500).render('error', {
             title: 'Error',
             message: 'Failed to launch game',
-            error: {
-                message: error.message,
-                details: 'Please try again or contact support'
-            }
+            error: { message: error.message }
         });
     }
 });
 
-// ============================================
-// 🆕 NEW ENDPOINT - GET /api/gameList
-// ============================================
-// Alternative endpoint to get game list
-// Can be called independently
-
+// Game List API
 router.post('/api/gameList', isAuthenticated, async (req, res) => {
     try {
         const { provider } = req.body;
-        const selectedProvider = provider || 'PG';
-
-        console.log(`\n📊 API: Fetching game list for provider: ${selectedProvider}`);
 
         const response = await axiosInstance.get(
-            `${process.env.GAME_API_URL}/api/gamelist?provider=${selectedProvider}`,
+            `${process.env.GAME_API_URL}/api/gamelist?provider=${provider || 'PG'}`,
             { timeout: 10000 }
         );
 
         const games = response.data.games || [];
-        console.log(`✅ Fetched ${games.length} games`);
 
         return res.json({
             success: true,
-            provider: selectedProvider,
+            provider: provider,
             gameCount: games.length,
             games: games
         });
 
     } catch (error) {
-        console.error('❌ Error fetching game list:', error.message);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to fetch game list',
-            error: error.message
-        });
+        return res.status(500).json({ success: false, error: error.message });
     }
 });
 
-// ============================================
-// ⭐ FALLBACK FUNCTION ONLY
-// ============================================
-// ⚠️ This should be removed once API provides getGameUrl endpoint
-// Only used if API is temporarily down or not yet implemented
-
+// ⭐⭐⭐ FALLBACK URL GENERATOR - สำคัญมาก!
 function generateFallbackGameUrl(provider, gameCode, sessionToken, gameData = {}) {
-    console.log('⚠️  Using client-side URL generation (TEMPORARY FALLBACK)');
+    console.log('\n⚠️ FALLBACK URL GENERATION');
+    console.log('='.repeat(60));
+    console.log('Provider:', provider);
+    console.log('Game Code:', gameCode);
+    console.log('Session Token:', sessionToken.substring(0, 30) + '...');
     
     const operatorToken = 'T65-AWDF-WAUE-OQ09-GST1';
     let gameUrl = '';
@@ -397,46 +323,63 @@ function generateFallbackGameUrl(provider, gameCode, sessionToken, gameData = {}
     switch (provider) {
         case 'PG':
             gameUrl = `https://m.pgsoft-th.com/${gameCode}/index.html?` +
-                     `language=th&` +
-                     `bet_type=1&` +
-                     `operator_token=${operatorToken}&` +
-                     `operator_player_session=${sessionToken}&` +
-                     `or=cdn.pgsoft-th.com`;
+                     `language=th&bet_type=1&operator_token=${operatorToken}&` +
+                     `operator_player_session=${sessionToken}&or=cdn.pgsoft-th.com`;
+            
+            console.log('\n🔗 PG URL Breakdown:');
+            console.log('   Host: m.pgsoft-th.com');
+            console.log('   Game Code:', gameCode);
+            console.log('   Operator Token:', operatorToken);
             break;
 
         case 'JILI':
-            gameUrl = `https://jili-server.foxi-bet.com/play/jili?` +
+            const jiliGameId = JILI_GAME_MAP[gameCode] || gameData.game_id || gameCode;
+            gameUrl = `https://portal.cgm-game.com/play/game?` +
                      `operator_player_session=${sessionToken}&` +
                      `operator_token=${operatorToken}&` +
-                     `game_code=${gameCode}&` +
-                     `game_id=${gameData.game_id || gameCode}`;
+                     `game_code=${gameCode}&game_id=${jiliGameId}&provider=jili`;
+            
+            console.log('\n🔗 JILI URL Breakdown:');
+            console.log('   Host: portal.cgm-game.com');
+            console.log('   Game Code:', gameCode);
+            console.log('   Game ID:', jiliGameId);
             break;
 
         case 'JOKER':
-            gameUrl = `https://joker.onsen168.com/play/joker?` +
+            gameUrl = `https://portal.cgm-game.com/play/game?` +
                      `operator_player_session=${sessionToken}&` +
                      `operator_token=${operatorToken}&` +
-                     `game_code=${gameCode}&` +
-                     `game_id=${gameCode}`;
+                     `game_code=${gameCode}&game_id=${gameCode}&provider=joker`;
+            
+            console.log('\n🔗 JOKER URL Breakdown:');
+            console.log('   Host: portal.cgm-game.com');
+            console.log('   Game Code:', gameCode);
             break;
 
         case 'PP':
-            gameUrl = `https://onsen168.com/play/game?` +
+            gameUrl = `https://portal.cgm-game.com/play/game?` +
                      `operator_player_session=${sessionToken}&` +
                      `operator_token=${operatorToken}&` +
-                     `game_code=${gameCode}&` +
-                     `game_id=${gameCode}&` +
-                     `provider=pracmatic`;
+                     `game_code=${gameCode}&game_id=${gameCode}&provider=pracmatic`;
+            
+            console.log('\n🔗 PP URL Breakdown:');
+            console.log('   Host: portal.cgm-game.com');
+            console.log('   Game Code:', gameCode);
             break;
 
         default:
             throw new Error(`Unsupported provider: ${provider}`);
     }
 
+    console.log('\n✅ Generated URL:');
+    console.log(gameUrl);
+    console.log('\n📊 URL Length:', gameUrl.length, 'chars');
+    console.log('='.repeat(60));
+    
     return gameUrl;
 }
 
-// ⭐ API Endpoint - Get providers list
+// Providers API
 router.get('/api/providers', (req, res) => {
     try {
         res.json({
@@ -449,31 +392,16 @@ router.get('/api/providers', (req, res) => {
             }))
         });
     } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
+        res.status(500).json({ success: false, message: error.message });
     }
 });
 
-// ============================================
-// 🆕 NEW ENDPOINT - GET /api/health
-// ============================================
-// Health check endpoint
-// Use this to test if backend is responding
-
+// Health check
 router.get('/api/health', (req, res) => {
-    return res.json({
+    res.json({
         success: true,
         status: 'OK',
-        timestamp: new Date().toISOString(),
-        endpoints: {
-            gameList: 'GET /games?provider={PROVIDER}',
-            playGame: 'GET /games/play/{provider}/{gameCode}',
-            getGameUrl: 'POST /api/getGameUrl',
-            getProviders: 'GET /api/providers',
-            health: 'GET /api/health'
-        }
+        timestamp: new Date().toISOString()
     });
 });
 
