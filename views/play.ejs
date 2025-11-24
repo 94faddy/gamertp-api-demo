@@ -31,7 +31,7 @@
             backdrop-filter: blur(10px);
         }
         
-        /* ⭐⭐⭐ ปรับ Game Container ให้มี padding และไม่กินขอบ ⭐⭐⭐ */
+        /* ⭐⭐⭐ Game Container ⭐⭐⭐ */
         .game-container {
             position: fixed;
             top: 60px;
@@ -45,7 +45,7 @@
             align-items: center;
         }
         
-        /* ⭐⭐⭐ Game Frame ใหม่ - มี border radius และ shadow ⭐⭐⭐ */
+        /* ⭐⭐⭐ Game Frame ⭐⭐⭐ */
         .game-frame {
             width: 100%;
             height: 100%;
@@ -55,6 +55,24 @@
             border-radius: 15px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.5);
             background: #000;
+        }
+        
+        /* Provider Badge */
+        .provider-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.15);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .provider-icon-badge {
+            font-size: 1.2rem;
         }
         
         /* Balance Info */
@@ -67,6 +85,7 @@
             align-items: center;
             gap: 10px;
             transition: all 0.3s;
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
         .balance-info:hover {
             background: rgba(255, 255, 255, 0.3);
@@ -107,10 +126,29 @@
             background: rgba(255, 255, 255, 0.2);
             border: none;
             color: white;
+            border-radius: 8px;
         }
         .back-btn:hover {
             transform: translateX(-5px);
             background: rgba(255, 255, 255, 0.3);
+            color: white;
+            text-decoration: none;
+        }
+        
+        .game-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .game-name {
+            font-weight: bold;
+            font-size: 1rem;
+        }
+        
+        .game-code {
+            font-size: 0.85rem;
+            opacity: 0.8;
         }
         
         /* Loading Overlay */
@@ -152,6 +190,12 @@
             }
             .game-header {
                 padding: 10px 15px;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+            .game-info {
+                order: 3;
+                width: 100%;
             }
         }
     </style>
@@ -160,18 +204,35 @@
     <!-- Loading Overlay -->
     <div class="loading-overlay" id="loadingOverlay">
         <div class="spinner"></div>
-        <div class="text-white mt-3">กำลังโหลดเกม...</div>
+        <div class="text-white mt-3">
+            <div>กำลังโหลดเกม...</div>
+            <div style="font-size: 0.9rem; opacity: 0.8; margin-top: 10px;">
+                ค่าย: <strong><%= provider.name %></strong>
+            </div>
+        </div>
     </div>
 
     <!-- Game Header -->
     <div class="game-header">
-        <div class="d-flex align-items-center">
-            <a href="/games" class="btn btn-sm back-btn">
-                <i class="bi bi-arrow-left"></i> กลับ
+        <div class="d-flex align-items-center gap-3">
+            <a href="/games?provider=<%= provider.code %>" class="btn btn-sm back-btn">
+                <i class="bi bi-arrow-left"></i> ย้อนกลับ
             </a>
-            <span class="ms-3 fw-bold">
-                <i class="bi bi-controller"></i> <%= game.game_name %>
-            </span>
+            
+            <!-- Provider Badge -->
+            <div class="provider-badge" style="background: rgba(255, 255, 255, 0.15);">
+                <span class="provider-icon-badge"><%= provider.icon %></span>
+                <span><%= provider.name %></span>
+            </div>
+        </div>
+        
+        <div class="game-info">
+            <div>
+                <div class="game-name"><%= game.game_name %></div>
+                <div class="game-code">
+                    <i class="bi bi-code-square"></i> <%= game.game_code %>
+                </div>
+            </div>
         </div>
         
         <!-- Balance Display -->
@@ -206,6 +267,13 @@
         let lastBalance = <%= user.balance %>;
         let isUpdating = false;
         const currency = '<%= user.currency %>';
+        const providerName = '<%= provider.name %>';
+        const providerCode = '<%= provider.code %>';
+
+        console.log('✅ Game page initialized');
+        console.log('🎰 Provider:', providerName);
+        console.log('🎮 Game:', '<%= game.game_name %>');
+        console.log('💰 Initial balance:', lastBalance.toFixed(2), currency);
 
         // Hide loading when iframe loads
         document.getElementById('gameFrame').addEventListener('load', function() {
@@ -292,8 +360,6 @@
         setTimeout(updateBalance, 1000);
 
         console.log('✅ Realtime balance update enabled');
-        console.log('🎮 Game:', '<%= game.game_name %>');
-        console.log('💰 Initial balance:', lastBalance.toFixed(2), currency);
 
         // Cleanup on page unload
         window.addEventListener('beforeunload', () => {
@@ -306,7 +372,7 @@
             if (e.key === 'Escape') {
                 if (confirm('คุณต้องการออกจากเกมหรือไม่?')) {
                     clearInterval(updateInterval);
-                    window.location.href = '/games';
+                    window.location.href = '/games?provider=' + providerCode;
                 }
             }
             

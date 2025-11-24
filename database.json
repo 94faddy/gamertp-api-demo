@@ -5,8 +5,8 @@
       "name": "demo-01",
       "apikey": "4fc5ad4e804552487315af49afb1bd73",
       "secret": "8d6198f7-fba5-4cbd-b092-c7042082138f",
-      "callback": "https://game-demo.cryteksoft.cloud/api",
-      "ip": "31.97.188.8",
+      "callback": "https://4bb7c5ef68c6.ngrok-free.app/api",
+      "ip": "49.228.254.58",
       "isActive": true,
       "createdAt": "2025-01-01T00:00:00.000Z"
     }
@@ -19,7 +19,7 @@
       "password": "$2b$10$hYZhtsBi4h5cQWmclR21Ju5UgcBqiTjQVxVeVGvS97SMnPjpVkiqO",
       "balance": 426.39999999999986,
       "currency": "THB",
-      "sessionToken": "59fe5298-ab7b-4e1b-b7a3-5f146f481013",
+      "sessionToken": "34b3c17ca391c9578d8b13396e3e85f6944f8870a8138ff18b7cf1d8a04e7c60",
       "createdAt": "2025-01-01T00:00:00.000Z"
     },
     {
