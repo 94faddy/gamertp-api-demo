@@ -1,0 +1,80 @@
+{
+  "agents": [
+    {
+      "id": "agent-001",
+      "name": "demo-01",
+      "apikey": "4fc5ad4e804552487315af49afb1bd73",
+      "secret": "8d6198f7-fba5-4cbd-b092-c7042082138f",
+      "callback": "https://game-demo.cryteksoft.cloud/api",
+      "ip": "31.97.188.8",
+      "isActive": true,
+      "createdAt": "2025-01-01T00:00:00.000Z"
+    }
+  ],
+  "users": [
+    {
+      "id": "user-001",
+      "agentId": "agent-001",
+      "username": "demo",
+      "password": "$2b$10$hYZhtsBi4h5cQWmclR21Ju5UgcBqiTjQVxVeVGvS97SMnPjpVkiqO",
+      "balance": 426.39999999999986,
+      "currency": "THB",
+      "sessionToken": "59fe5298-ab7b-4e1b-b7a3-5f146f481013",
+      "createdAt": "2025-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "user-1762326463004",
+      "createdAt": "2025-11-05T07:07:43.004Z",
+      "balance": 54383.5,
+      "currency": "THB",
+      "agentId": "agent-001",
+      "username": "jonz",
+      "password": "$2a$10$ZCuwJNE2HPhHBu1xTpxide3YeCAGS1fQz4nF.Z5qYWJJ71gvd4EpC",
+      "sessionToken": "545bd0e5-48f8-4da6-8263-4e2e25ef4f33"
+    },
+    {
+      "id": "user-1762329161080",
+      "createdAt": "2025-11-05T07:52:41.081Z",
+      "balance": 416,
+      "currency": "THB",
+      "agentId": "agent-001",
+      "username": "Xlz1688",
+      "password": "$2a$10$sNpC3XXiNoYUyhEaI3XwaOlZPaTq09NO4tRiblpI0Xbjh7x02Xm4q",
+      "sessionToken": "95c15e07-5512-4b2a-bfcf-9293fce612ee"
+    },
+    {
+      "id": "user-1762329576088",
+      "createdAt": "2025-11-05T07:59:36.088Z",
+      "balance": 1000,
+      "currency": "THB",
+      "agentId": "agent-001",
+      "username": "Zxczxc123",
+      "password": "$2a$10$ZQSH1b0YEs68gJ4U2t7AMu5fTLs/saksRqcPxXHwG759NcSz.Q4RW",
+      "sessionToken": null
+    },
+    {
+      "id": "user-1762954075716",
+      "createdAt": "2025-11-12T13:27:55.716Z",
+      "balance": 2150.49999999979,
+      "currency": "THB",
+      "agentId": "agent-001",
+      "username": "NINEW123",
+      "password": "$2a$10$p0j.FeO70.muFh4smfCR0u8qyMMxV79acB9yLgh0qEe9F4SlsKNEq",
+      "sessionToken": "302c9483-5962-4401-8408-d80dce8fdeb5"
+    },
+    {
+      "id": "user-1763316451911",
+      "createdAt": "2025-11-16T18:07:31.911Z",
+      "balance": 988.1,
+      "currency": "THB",
+      "agentId": "agent-001",
+      "username": "0958580226",
+      "password": "$2a$10$Cd9GHwcmTocW4ZkFScv.w.GFGASstkaVaWD7wpoKIhwi4H8g2thBW",
+      "sessionToken": "853c6e64-5555-469a-818b-32a39b7936c0"
+    }
+  ],
+  "settings": {
+    "defaultBalance": 10000,
+    "currency": "THB"
+  }
+}
